@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Promóciós JSON generátor</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --border: #d9dde3;
+      --bg: #f5f6f8;
+      --panel: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --accent: #111827;
+      --danger: #b42318;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 32px 16px;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+    }
+
+    .intro {
+      margin: 0 0 24px;
+      color: var(--muted);
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    input[type="date"],
+    input[type="url"],
+    textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font: inherit;
+      background: #fff;
+      color: var(--text);
+    }
+
+    input:focus,
+    textarea:focus {
+      outline: 2px solid #cbd5e1;
+      outline-offset: 1px;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .promotion {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      margin-top: 16px;
+      background: #fafafa;
+    }
+
+    .promotion-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .promotion-title {
+      font-weight: 700;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    button {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      background: #fff;
+      color: var(--text);
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    button.primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    button.danger {
+      color: var(--danger);
+    }
+
+    textarea {
+      min-height: 360px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      resize: vertical;
+    }
+
+    .status {
+      min-height: 20px;
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    @media (max-width: 760px) {
+      .row {
+        grid-template-columns: 1fr;
+      }
+
+      body {
+        padding: 20px 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Promóciós JSON generátor</h1>
+    <p class="intro">
+      Add meg a promóciók adatait, majd másold ki a kész HTML/JSON blokkot az UNAS HTML típusú paraméterébe.
+    </p>
+
+    <div class="panel">
+      <div class="checkbox-row">
+        <input type="checkbox" id="combinable" checked>
+        <label for="combinable">A promóciók összevonhatók</label>
+      </div>
+      <div class="hint" style="margin-top:8px;">
+        Ha be van kapcsolva, az aktív promóciók kedvezményei összeadódnak, és kiszámítható a végső ár.
+      </div>
+    </div>
+
+    <div class="panel">
+      <div id="promotions"></div>
+
+      <div class="actions">
+        <button type="button" id="addPromotion">+ Promóció hozzáadása</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <label for="output">Generált blokk</label>
+      <textarea id="output" readonly></textarea>
+
+      <div class="actions">
+        <button type="button" class="primary" id="copyOutput">Másolás vágólapra</button>
+        <button type="button" id="refreshOutput">Frissítés</button>
+      </div>
+
+      <div class="status" id="status"></div>
+    </div>
+  </div>
+
+  <template id="promotionTemplate">
+    <div class="promotion">
+      <div class="promotion-header">
+        <div class="promotion-title">Promóció</div>
+        <button type="button" class="danger remove-promotion">Eltávolítás</button>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>Promóció neve</label>
+          <input type="text" class="promotion-name" placeholder="pl. Sony téli pénzvisszatérítés">
+        </div>
+
+        <div class="field">
+          <label>Kedvezmény összege (Ft)</label>
+          <input type="number" class="promotion-discount" min="0" step="1" placeholder="37000">
+        </div>
+
+        <div class="field">
+          <label>Kezdő dátum</label>
+          <input type="date" class="promotion-start-date">
+        </div>
+
+        <div class="field">
+          <label>Záró dátum</label>
+          <input type="date" class="promotion-end-date">
+        </div>
+
+        <div class="field" style="grid-column: 1 / -1;">
+          <label>Promóció URL</label>
+          <input type="url" class="promotion-url" placeholder="https://...">
+          <div class="hint">Opcionális. Ha nincs URL, hagyd üresen.</div>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <script>
+    const promotionsContainer = document.getElementById('promotions');
+    const promotionTemplate = document.getElementById('promotionTemplate');
+    const combinableInput = document.getElementById('combinable');
+    const output = document.getElementById('output');
+    const status = document.getElementById('status');
+
+    function addPromotion(values = {}) {
+      const fragment = promotionTemplate.content.cloneNode(true);
+      const promotion = fragment.querySelector('.promotion');
+
+      promotion.querySelector('.promotion-name').value = values.promotion_name || '';
+      promotion.querySelector('.promotion-discount').value =
+        values.promotion_discount ?? '';
+      promotion.querySelector('.promotion-start-date').value =
+        values.promotion_start_date || '';
+      promotion.querySelector('.promotion-end-date').value =
+        values.promotion_end_date || '';
+      promotion.querySelector('.promotion-url').value =
+        values.promotion_url || '';
+
+      promotion.querySelector('.remove-promotion').addEventListener('click', () => {
+        promotion.remove();
+
+        if (!promotionsContainer.querySelector('.promotion')) {
+          addPromotion();
+        }
+
+        generateOutput();
+      });
+
+      promotion.querySelectorAll('input').forEach(input => {
+        input.addEventListener('input', generateOutput);
+        input.addEventListener('change', generateOutput);
+      });
+
+      promotionsContainer.appendChild(fragment);
+      updatePromotionTitles();
+      generateOutput();
+    }
+
+    function updatePromotionTitles() {
+      [...promotionsContainer.querySelectorAll('.promotion')].forEach((promotion, index) => {
+        promotion.querySelector('.promotion-title').textContent =
+          `${index + 1}. promóció`;
+      });
+    }
+
+    function collectPromotions() {
+      return [...promotionsContainer.querySelectorAll('.promotion')]
+        .map(promotion => {
+          const name = promotion.querySelector('.promotion-name').value.trim();
+          const discountRaw = promotion.querySelector('.promotion-discount').value;
+          const startDate = promotion.querySelector('.promotion-start-date').value;
+          const endDate = promotion.querySelector('.promotion-end-date').value;
+          const url = promotion.querySelector('.promotion-url').value.trim();
+
+          const item = {
+            promotion_name: name,
+            promotion_discount: discountRaw === '' ? 0 : Number(discountRaw),
+            promotion_start_date: startDate,
+            promotion_end_date: endDate,
+            promotion_url: url
+          };
+
+          return item;
+        });
+    }
+
+    function generateOutput() {
+      updatePromotionTitles();
+
+      const data = {
+        combinable: combinableInput.checked,
+        promotions: collectPromotions()
+      };
+
+      const json = JSON.stringify(data, null, 4);
+
+      output.value =
+`<script type="application/json" class="product-promotions-data">
+${json}
+<\/script>`;
+
+      status.textContent = '';
+    }
+
+    async function copyOutput() {
+      generateOutput();
+
+      try {
+        await navigator.clipboard.writeText(output.value);
+        status.textContent = 'A blokk a vágólapra került.';
+      } catch (error) {
+        output.select();
+        document.execCommand('copy');
+        status.textContent = 'A blokk a vágólapra került.';
+      }
+    }
+
+    document.getElementById('addPromotion').addEventListener('click', () => {
+      addPromotion();
+    });
+
+    document.getElementById('copyOutput').addEventListener('click', copyOutput);
+    document.getElementById('refreshOutput').addEventListener('click', generateOutput);
+    combinableInput.addEventListener('change', generateOutput);
+
+    addPromotion({
+      promotion_name: 'Sony téli pénzvisszatérítés',
+      promotion_discount: 37000,
+      promotion_start_date: '2026-10-01',
+      promotion_end_date: '2026-12-31',
+      promotion_url: 'https://www.sony.hu/'
+    });
+  </script>
+</body>
+</html>
